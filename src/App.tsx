@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { generateAIResponse } from './lib/openai'
 import { supabase } from './lib/supabase'
 
@@ -6,6 +6,30 @@ function App() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Array<{text: string, isAi: boolean}>>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Fehler beim Laden der Nachrichten:', error)
+        return
+      }
+
+      if (data) {
+        const formattedMessages = data.flatMap(conversation => [
+          { text: conversation.user_message, isAi: false },
+          { text: conversation.ai_response, isAi: true }
+        ])
+        setMessages(formattedMessages)
+      }
+    }
+
+    loadMessages()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
